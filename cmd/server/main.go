@@ -5,18 +5,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/casnerano/course-concurrency-go/internal/config"
+	serverconfig "github.com/casnerano/course-concurrency-go/internal/config/server"
 	"github.com/casnerano/course-concurrency-go/internal/logger"
 )
 
 func main() {
-	if err := config.InitServer(); err != nil {
-		panic(err.Error())
+	config, configErr := serverconfig.LoadConfig()
+	if configErr != nil {
+		panic(configErr.Error())
 	}
 
-	cfg := config.GetServer()
-
-	logger.Init(config.ServerName, cfg.LogLevel)
+	logger.Init("memdb", config.LogLevel)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

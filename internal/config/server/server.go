@@ -1,27 +1,19 @@
-package config
+package server
 
 import (
 	"flag"
 	"log/slog"
 )
 
-var (
-	ServerName    = "memdb"
-	ServerVersion = "dev"
-)
-
-type Server struct {
+type Config struct {
 	Addr string `yaml:"addr"`
 
 	LogLevel slog.Level `yaml:"log_level"`
 }
 
-var server = Server{
-	Addr:     ":8081",
-	LogLevel: slog.LevelError,
-}
+func LoadConfig() (Config, error) {
+	server := getDefaultConfig()
 
-func InitServer() error {
 	var verbose bool
 	flag.BoolVar(&verbose, "verbose", verbose, "Verbosity")
 	flag.StringVar(&server.Addr, "address", server.Addr, "Server address")
@@ -32,9 +24,12 @@ func InitServer() error {
 		server.LogLevel = slog.LevelDebug
 	}
 
-	return nil
+	return server, nil
 }
 
-func GetServer() Server {
-	return server
+func getDefaultConfig() Config {
+	return Config{
+		Addr:     ":8081",
+		LogLevel: slog.LevelError,
+	}
 }
