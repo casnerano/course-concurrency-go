@@ -24,37 +24,37 @@ func New(storage storage) *Database {
 	}
 }
 
-type Request struct {
+type Query struct {
 	Command types.Command
 	Key     *types.Key
 	Value   *types.Value
 }
 
-func (d *Database) HandleRequest(ctx context.Context, req Request) (*types.Value, error) {
-	if err := d.validateRequest(req); err != nil {
+func (d *Database) HandleQuery(ctx context.Context, query Query) (*types.Value, error) {
+	if err := d.validateQuery(query); err != nil {
 		return nil, fmt.Errorf("invalid request: %w", err)
 	}
 
-	switch req.Command {
+	switch query.Command {
 	case types.CommandGet:
-		return d.handleCommandGet(ctx, *req.Key)
+		return d.handleCommandGet(ctx, *query.Key)
 	case types.CommandSet:
-		return nil, d.handleCommandSet(ctx, *req.Key, req.Value)
+		return nil, d.handleCommandSet(ctx, *query.Key, query.Value)
 	case types.CommandDel:
-		return nil, d.handleCommandDel(ctx, *req.Key)
+		return nil, d.handleCommandDel(ctx, *query.Key)
 	case types.CommandClear:
 		return nil, d.handleCommandClear(ctx)
 	default:
-		return nil, fmt.Errorf("unknown command: %s", req.Command)
+		return nil, fmt.Errorf("unknown command: %s", query.Command)
 	}
 }
 
-func (d *Database) validateRequest(req Request) error {
-	if req.Command.NeedKeyArg() && req.Key == nil {
+func (d *Database) validateQuery(query Query) error {
+	if query.Command.NeedKeyArg() && query.Key == nil {
 		return fmt.Errorf("key is nil")
 	}
 
-	if req.Command.NeedValueArg() && req.Value == nil {
+	if query.Command.NeedValueArg() && query.Value == nil {
 		return fmt.Errorf("value is nil")
 	}
 
