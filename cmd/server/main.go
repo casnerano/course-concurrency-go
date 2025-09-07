@@ -20,6 +20,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	_ = getDatabase()
+
 	<-ctx.Done()
 
 	logger.Info("Stopped server..")

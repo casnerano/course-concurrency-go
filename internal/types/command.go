@@ -1,22 +1,32 @@
 package types
 
-type Command int
+type Command string
 
 const (
-	CommandGet Command = iota
-	CommandSet
-	CommandDel
+	CommandUnknown Command = ""
+	CommandGet     Command = "GET"
+	CommandSet     Command = "SET"
+	CommandDel     Command = "DEL"
+	CommandClear   Command = "CLEAR"
 )
 
 func (c Command) String() string {
-	switch c {
-	case CommandGet:
-		return "GET"
-	case CommandSet:
-		return "SET"
-	case CommandDel:
-		return "DEL"
-	default:
-		return "UNKNOWN"
-	}
+	return string(c)
+}
+
+var commandOpts = map[Command]struct {
+	NeedKeyArg   bool
+	NeedValueArg bool
+}{
+	CommandGet: {NeedKeyArg: true},
+	CommandSet: {NeedKeyArg: true, NeedValueArg: true},
+	CommandDel: {NeedKeyArg: true},
+}
+
+func (c Command) NeedKeyArg() bool {
+	return commandOpts[c].NeedKeyArg
+}
+
+func (c Command) NeedValueArg() bool {
+	return commandOpts[c].NeedValueArg
 }
