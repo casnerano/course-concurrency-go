@@ -9,7 +9,7 @@ import (
 type engine interface {
 	Get(context.Context, types.Key) (*types.Value, error)
 	Set(context.Context, types.Key, *types.Value) error
-	Del(context.Context, types.Key) error
+	Del(context.Context, []types.Key) error
 	Clear(context.Context) error
 }
 
@@ -41,8 +41,8 @@ func (s *Storage) Set(ctx context.Context, key types.Key, value *types.Value) er
 	return s.engine.Set(ctx, key, value)
 }
 
-func (s *Storage) Del(ctx context.Context, key types.Key) error {
-	return s.engine.Del(ctx, key)
+func (s *Storage) Del(ctx context.Context, keys []types.Key) error {
+	return s.engine.Del(ctx, keys)
 }
 
 func (s *Storage) Clear(ctx context.Context) error {

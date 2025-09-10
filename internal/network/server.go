@@ -8,14 +8,13 @@ import (
 	"io"
 	"net"
 
-	"github.com/casnerano/course-concurrency-go/internal/database"
 	"github.com/casnerano/course-concurrency-go/internal/logger"
 	"github.com/casnerano/course-concurrency-go/internal/network/protocol"
 	"github.com/casnerano/course-concurrency-go/internal/types"
 )
 
 type dbHandler interface {
-	HandleQuery(ctx context.Context, req database.Query) (*types.Value, error)
+	HandleQuery(ctx context.Context, raqQuery string) (*types.Value, error)
 }
 
 type Server struct {
@@ -93,51 +92,48 @@ func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
 				return
 			}
 
-			response := protocol.Response{
-				Status:       protocol.ResponseStatusCancel,
-				ErrorMessage: "failed decode request: " + decodeErr.Error(),
-			}
-
-			if err := s.protocol.EncodeResponse(writer, &response); err != nil {
-				logger.Error("failed encode response", "context", response)
-			}
-
-			return
+			s.sendErrorResponse(writer, "failed decode request: "+decodeErr.Error())
 		}
 
-		dbQuery := database.Query{
-			Command: request.Payload.Command,
-			Key:     request.Payload.Key,
-			Value:   request.Payload.Value,
+		dbValue, dbHandleErr := s.dbHandler.HandleQuery(ctx, request.Payload.RawQuery)
+		if dbHandleErr != nil {
+			s.sendErrorResponse(writer, "failed handle query: "+dbHandleErr.Error())
 		}
 
-		value, handleQueryErr := s.dbHandler.HandleQuery(ctx, dbQuery)
-		if handleQueryErr != nil {
-			response := protocol.Response{
-				Status:       protocol.ResponseStatusCancel,
-				ErrorMessage: "failed handle query: " + handleQueryErr.Error(),
-			}
-
-			if err := s.protocol.EncodeResponse(writer, &response); err != nil {
-				logger.Error("failed encode response", "context", response)
-
-				return
-			}
-		}
-
-		response := protocol.Response{
-			Value:  value,
-			Status: protocol.ResponseStatusOk,
-		}
-
-		if err := s.protocol.EncodeResponse(writer, &response); err != nil {
-			logger.Error("failed encode response", "context", response)
-
-			return
-		}
+		s.sendSuccessResponse(writer, &protocol.ResponsePayload{
+			Value: dbValue,
+		})
 
 		if err := writer.Flush(); err != nil {
 			return
 		}
+	}
+}
+
+func (s *Server) sendErrorResponse(writer io.Writer, error string) {
+	s.sendFailedResponse(writer, protocol.ResponseStatusError, &error)
+}
+
+func (s *Server) sendCancelResponse(writer io.Writer, error string) {
+	s.sendFailedResponse(writer, protocol.ResponseStatusCancel, &error)
+}
+
+func (s *Server) sendSuccessResponse(writer io.Writer, payload *protocol.ResponsePayload) {
+	s.sendResponse(writer, protocol.Response{
+		Payload: payload,
+		Status:  protocol.ResponseStatusOk,
+	})
+}
+
+func (s *Server) sendFailedResponse(writer io.Writer, status protocol.ResponseStatus, error *string) {
+	s.sendResponse(writer, protocol.Response{
+		Status: status,
+		Error:  error,
+	})
+}
+
+func (s *Server) sendResponse(writer io.Writer, response protocol.Response) {
+	if err := s.protocol.EncodeResponse(writer, &response); err != nil {
+		logger.Error("failed encode response", "context", response)
 	}
 }

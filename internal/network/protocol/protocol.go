@@ -18,16 +18,17 @@ type Request struct {
 }
 
 type RequestPayload struct {
-	Command types.Command
-	Key     *types.Key
-	Value   *types.Value
+	RawQuery string `json:"raw_query"`
 }
 
 type Response struct {
-	Value *types.Value
+	Payload *ResponsePayload `json:"payload,omitempty"`
+	Status  ResponseStatus   `json:"status"`
+	Error   *string          `json:"error,omitempty"`
+}
 
-	Status       ResponseStatus
-	ErrorMessage string
+type ResponsePayload struct {
+	Value *types.Value
 }
 
 type ResponseStatus string
@@ -35,4 +36,5 @@ type ResponseStatus string
 const (
 	ResponseStatusOk     ResponseStatus = "OK"
 	ResponseStatusCancel ResponseStatus = "CANCEL"
+	ResponseStatusError  ResponseStatus = "ERROR"
 )

@@ -7,6 +7,7 @@ import (
 
 	config "github.com/casnerano/course-concurrency-go/internal/config/server"
 	"github.com/casnerano/course-concurrency-go/internal/database"
+	"github.com/casnerano/course-concurrency-go/internal/database/compute"
 	"github.com/casnerano/course-concurrency-go/internal/database/storage"
 	"github.com/casnerano/course-concurrency-go/internal/database/storage/engine/memory"
 	"github.com/casnerano/course-concurrency-go/internal/logger"
@@ -39,6 +40,7 @@ func runServer(ctx context.Context, addr string) error {
 		addr,
 		protocol.NewJSON(),
 		database.New(
+			compute.New(),
 			storage.New(
 				memory.New(),
 			),

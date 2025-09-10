@@ -39,11 +39,13 @@ func (m *Memory) Set(_ context.Context, key types.Key, value *types.Value) error
 	return nil
 }
 
-func (m *Memory) Del(_ context.Context, key types.Key) error {
+func (m *Memory) Del(_ context.Context, keys []types.Key) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	delete(m.store, key)
+	for _, key := range keys {
+		delete(m.store, key)
+	}
 
 	return nil
 }
