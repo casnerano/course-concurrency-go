@@ -14,7 +14,7 @@ type Protocol interface {
 }
 
 type Request struct {
-	Payload RequestPayload
+	Payload RequestPayload `json:"payload"`
 }
 
 type RequestPayload struct {
@@ -28,7 +28,7 @@ type Response struct {
 }
 
 type ResponsePayload struct {
-	Value *types.Value
+	Value *types.Value `json:"value,omitempty"`
 }
 
 type ResponseStatus string

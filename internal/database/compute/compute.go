@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/casnerano/course-concurrency-go/internal/logger"
 	"github.com/casnerano/course-concurrency-go/internal/types"
 )
 
@@ -36,10 +37,16 @@ type parsedQuery struct {
 }
 
 func (c *Compute) Parse(rawQuery string) (types.Query, error) {
+	logger.Debug("input query: " + rawQuery)
+
 	query, err := c.parse(rawQuery)
 	if err != nil {
+		logger.Debug("failed parse input query: " + err.Error())
+
 		return nil, fmt.Errorf("failed parse query: %w", err)
 	}
+
+	logger.Debug(fmt.Sprintf("success parse input query: %+v", query))
 
 	switch query.command {
 	case types.CommandGet:
@@ -67,7 +74,9 @@ func (c *Compute) parse(rawQuery string) (parsedQuery, error) {
 		options = make(types.Options, 0)
 	)
 
-	for _, token := range tokens[1:] {
+	tokens = tokens[1:]
+
+	for _, token := range tokens {
 		if strings.HasPrefix(token, commandOptionPrefix) {
 			options = append(options, types.Option(strings.TrimPrefix(token, commandOptionPrefix)))
 		}
@@ -89,7 +98,7 @@ func (c *Compute) parse(rawQuery string) (parsedQuery, error) {
 }
 
 func (c *Compute) buildQueryGet(query parsedQuery) (types.Query, error) {
-	return types.NewQueryGet(types.Key(query.args[1]), query.options...), nil
+	return types.NewQueryGet(types.Key(query.args[0]), query.options...), nil
 }
 
 func (c *Compute) buildQuerySet(query parsedQuery) (types.Query, error) {

@@ -1,7 +1,6 @@
 package network
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -82,31 +81,31 @@ func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
 		}
 	}()
 
-	reader := bufio.NewReader(conn)
-	writer := bufio.NewWriter(conn)
-
 	for {
-		request, decodeErr := s.protocol.DecodeRequest(reader)
+		request, decodeErr := s.protocol.DecodeRequest(conn)
 		if decodeErr != nil {
 			if decodeErr == io.EOF {
 				return
 			}
 
-			s.sendErrorResponse(writer, "failed decode request: "+decodeErr.Error())
+			s.sendErrorResponse(conn, "failed decode request: "+decodeErr.Error())
+			continue
 		}
 
 		dbValue, dbHandleErr := s.dbHandler.HandleQuery(ctx, request.Payload.RawQuery)
 		if dbHandleErr != nil {
-			s.sendErrorResponse(writer, "failed handle query: "+dbHandleErr.Error())
+			s.sendErrorResponse(conn, "failed handle query: "+dbHandleErr.Error())
+			continue
 		}
 
-		s.sendSuccessResponse(writer, &protocol.ResponsePayload{
-			Value: dbValue,
-		})
-
-		if err := writer.Flush(); err != nil {
-			return
+		var payload *protocol.ResponsePayload
+		if dbValue != nil {
+			payload = &protocol.ResponsePayload{
+				Value: dbValue,
+			}
 		}
+
+		s.sendSuccessResponse(conn, payload)
 	}
 }
 
