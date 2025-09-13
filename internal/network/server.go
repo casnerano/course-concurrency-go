@@ -14,7 +14,7 @@ import (
 )
 
 type dbHandler interface {
-	HandleQuery(ctx context.Context, raqQuery string) (*types.Value, error)
+	HandleQuery(ctx context.Context, rawQuery string) (*types.Value, error)
 }
 
 type Options struct {
