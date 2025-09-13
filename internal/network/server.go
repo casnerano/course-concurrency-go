@@ -12,6 +12,8 @@ import (
 	"github.com/casnerano/course-concurrency-go/internal/types"
 )
 
+const maxConnections = 100
+
 type dbHandler interface {
 	HandleQuery(ctx context.Context, raqQuery string) (*types.Value, error)
 }
@@ -21,6 +23,8 @@ type Server struct {
 	listener  net.Listener
 	protocol  protocol.Protocol
 	dbHandler dbHandler
+
+	connLimiter chan struct{}
 }
 
 func NewServer(addr string, protocol protocol.Protocol, dbHandler dbHandler) *Server {
@@ -28,6 +32,8 @@ func NewServer(addr string, protocol protocol.Protocol, dbHandler dbHandler) *Se
 		addr:      addr,
 		protocol:  protocol,
 		dbHandler: dbHandler,
+
+		connLimiter: make(chan struct{}, maxConnections),
 	}
 }
 
@@ -54,9 +60,13 @@ func (s *Server) Start(ctx context.Context) error {
 
 	logger.Info("server started on: " + s.addr)
 
+	return s.listen(ctx)
+}
+
+func (s *Server) listen(ctx context.Context) error {
 	for {
-		conn, acceptErr := s.listener.Accept()
-		if acceptErr != nil {
+		conn, err := s.listener.Accept()
+		if err != nil {
 			if ctx.Err() != nil {
 				return nil
 			}
@@ -69,49 +79,15 @@ func (s *Server) Start(ctx context.Context) error {
 			return fmt.Errorf("failed accept: %w", err)
 		}
 
-		go s.handleConnection(ctx, conn)
-	}
-}
+		s.connLimiter <- struct{}{}
 
-func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
-	defer func() {
-		if err := recover(); err != nil {
-			s.sendErrorResponse(conn, fmt.Sprintf("internal error: %s", err))
-		}
-	}()
+		go func() {
+			defer func() {
+				<-s.connLimiter
+			}()
 
-	defer func() {
-		closeErr := conn.Close()
-		if closeErr != nil {
-			logger.Error("failed close connection: " + closeErr.Error())
-		}
-	}()
-
-	for {
-		request, decodeErr := s.protocol.DecodeRequest(conn)
-		if decodeErr != nil {
-			if decodeErr == io.EOF {
-				return
-			}
-
-			s.sendErrorResponse(conn, "failed decode request: "+decodeErr.Error())
-			continue
-		}
-
-		dbValue, dbHandleErr := s.dbHandler.HandleQuery(ctx, request.Payload.RawQuery)
-		if dbHandleErr != nil {
-			s.sendErrorResponse(conn, "failed handle query: "+dbHandleErr.Error())
-			continue
-		}
-
-		var payload *protocol.ResponsePayload
-		if dbValue != nil {
-			payload = &protocol.ResponsePayload{
-				Value: dbValue,
-			}
-		}
-
-		s.sendSuccessResponse(conn, payload)
+			s.handleConnection(ctx, conn)
+		}()
 	}
 }
 
