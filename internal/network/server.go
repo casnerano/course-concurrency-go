@@ -6,20 +6,26 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"time"
 
 	"github.com/casnerano/course-concurrency-go/internal/logger"
 	"github.com/casnerano/course-concurrency-go/internal/network/protocol"
 	"github.com/casnerano/course-concurrency-go/internal/types"
 )
 
-const maxConnections = 100
-
 type dbHandler interface {
 	HandleQuery(ctx context.Context, raqQuery string) (*types.Value, error)
 }
 
+type Options struct {
+	Address        string
+	MaxConnections int
+	MaxMessageSize int
+	IdleTimeout    time.Duration
+}
+
 type Server struct {
-	addr      string
+	options   Options
 	listener  net.Listener
 	protocol  protocol.Protocol
 	dbHandler dbHandler
@@ -27,18 +33,18 @@ type Server struct {
 	connLimiter chan struct{}
 }
 
-func NewServer(addr string, protocol protocol.Protocol, dbHandler dbHandler) *Server {
+func NewServer(protocol protocol.Protocol, dbHandler dbHandler, options Options) *Server {
 	return &Server{
-		addr:      addr,
+		options:   options,
 		protocol:  protocol,
 		dbHandler: dbHandler,
 
-		connLimiter: make(chan struct{}, maxConnections),
+		connLimiter: make(chan struct{}, options.MaxConnections),
 	}
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	listener, err := net.Listen("tcp", s.addr)
+	listener, err := net.Listen("tcp", s.options.Address)
 	if err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}
@@ -58,7 +64,7 @@ func (s *Server) Start(ctx context.Context) error {
 		}
 	}()
 
-	logger.Info("server started on: " + s.addr)
+	logger.Info("server started on: " + s.options.Address)
 
 	return s.listen(ctx)
 }

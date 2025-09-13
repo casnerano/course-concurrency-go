@@ -3,7 +3,7 @@ engine:
 network:
   address: "127.0.0.1:3223"
   max_connections: 100
-  max_message_size: "4KB"
-  idle_timeout: 5m
+  max_message_size_bytes: 4096
+  idle_timeout_ms: 5000
 logging:
   level: "info"

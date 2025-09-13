@@ -6,7 +6,7 @@ import (
 	"github.com/casnerano/course-concurrency-go/internal/types"
 )
 
-type engine interface {
+type Engine interface {
 	Get(context.Context, types.Key) (*types.Value, error)
 	Set(context.Context, types.Key, *types.Value) error
 	Del(context.Context, []types.Key) error
@@ -18,10 +18,10 @@ type options struct{}
 type Option func(*options)
 
 type Storage struct {
-	engine engine
+	engine Engine
 }
 
-func New(engine engine, opts ...Option) *Storage {
+func New(engine Engine, opts ...Option) *Storage {
 	defOptions := options{}
 
 	for _, opt := range opts {

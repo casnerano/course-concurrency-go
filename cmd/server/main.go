@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os/signal"
 	"syscall"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/casnerano/course-concurrency-go/internal/database"
 	"github.com/casnerano/course-concurrency-go/internal/database/compute"
 	"github.com/casnerano/course-concurrency-go/internal/database/storage"
-	"github.com/casnerano/course-concurrency-go/internal/database/storage/engine/memory"
+	memory_engine "github.com/casnerano/course-concurrency-go/internal/database/storage/engine/memory"
 	"github.com/casnerano/course-concurrency-go/internal/logger"
 	"github.com/casnerano/course-concurrency-go/internal/network"
 	"github.com/casnerano/course-concurrency-go/internal/network/protocol"
@@ -26,7 +27,13 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	if err = runServer(ctx, cfg.Network.Address); err != nil {
+	var server *network.Server
+	server, err = buildServer(cfg)
+	if err != nil {
+		logger.Error("server configuration error: " + err.Error())
+	}
+
+	if err = server.Start(ctx); err != nil {
 		logger.Error("server internal error: " + err.Error())
 	}
 
@@ -35,17 +42,30 @@ func main() {
 	logger.Info("stopped server..")
 }
 
-func runServer(ctx context.Context, addr string) error {
+func buildServer(cfg *config.Config) (*network.Server, error) {
+	var engine storage.Engine
+	switch engineType := cfg.Engine.Type; engineType {
+	case config.EngineTypeInMemory:
+		engine = memory_engine.New()
+	default:
+		return nil, fmt.Errorf("unknown engine type: %s", engineType)
+	}
+
+	networkOptions := network.Options{
+		Address:        cfg.Network.Address,
+		MaxConnections: cfg.Network.MaxConnections,
+		MaxMessageSize: cfg.Network.MaxMessageSize,
+		IdleTimeout:    cfg.Network.IdleTimeout,
+	}
+
 	server := network.NewServer(
-		addr,
 		protocol.NewJSON(),
 		database.New(
 			compute.New(),
-			storage.New(
-				memory.New(),
-			),
+			storage.New(engine),
 		),
+		networkOptions,
 	)
 
-	return server.Start(ctx)
+	return server, nil
 }

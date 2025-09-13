@@ -15,15 +15,21 @@ const defaultConfigFile = "default.yaml"
 //go:embed *.yaml
 var defaultConfig embed.FS
 
+type EngineType string
+
+const (
+	EngineTypeInMemory EngineType = "in_memory"
+)
+
 type Config struct {
 	Engine struct {
-		Type string `yaml:"type"`
+		Type EngineType `yaml:"type"`
 	} `yaml:"engine"`
 	Network struct {
-		Address        string `yaml:"address"`
-		MaxConnections int    `yaml:"max_connections"`
-		MaxMessageSize int    `yaml:"max_message_size"`
-		IdleTimeout    time.Duration
+		Address        string        `yaml:"address"`
+		MaxConnections int           `yaml:"max_connections"`
+		MaxMessageSize int           `yaml:"max_message_size"`
+		IdleTimeout    time.Duration `yaml:"idle_timeout"`
 	} `yaml:"network"`
 	Logging struct {
 		Level slog.Level `yaml:"level"`
