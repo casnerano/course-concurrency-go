@@ -16,17 +16,17 @@ import (
 )
 
 func main() {
-	cfg, err := config.LoadConfig()
+	cfg, err := config.Load()
 	if err != nil {
 		panic(err.Error())
 	}
 
-	logger.Init("memdb", cfg.LogLevel)
+	logger.Init("memdb", cfg.Logging.Level)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	if err = runServer(ctx, cfg.Addr); err != nil {
+	if err = runServer(ctx, cfg.Network.Address); err != nil {
 		logger.Error("server internal error: " + err.Error())
 	}
 
