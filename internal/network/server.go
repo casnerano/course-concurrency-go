@@ -75,6 +75,12 @@ func (s *Server) Start(ctx context.Context) error {
 
 func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
 	defer func() {
+		if err := recover(); err != nil {
+			s.sendErrorResponse(conn, fmt.Sprintf("internal error: %s", err))
+		}
+	}()
+
+	defer func() {
 		closeErr := conn.Close()
 		if closeErr != nil {
 			logger.Error("failed close connection: " + closeErr.Error())
