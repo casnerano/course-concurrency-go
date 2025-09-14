@@ -51,7 +51,7 @@ func buildServer(cfg *config.Config) (*network.Server, error) {
 		return nil, fmt.Errorf("unknown engine type: %s", engineType)
 	}
 
-	networkOptions := network.Options{
+	networkOptions := network.ServerOptions{
 		Address:        cfg.Network.Address,
 		MaxConnections: cfg.Network.MaxConnections,
 		MaxMessageSize: cfg.Network.MaxMessageSize,

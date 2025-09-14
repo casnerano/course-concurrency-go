@@ -21,10 +21,9 @@ func (j *JSON) EncodeResponse(writer io.Writer, response *Response) error {
 	return json.NewEncoder(writer).Encode(response)
 }
 
-func (j *JSON) DecodeRequest(reader io.Reader, maxSize int) (*Request, error) {
-	limitedReader := &io.LimitedReader{R: reader, N: int64(maxSize)}
+func (j *JSON) DecodeRequest(reader io.Reader) (*Request, error) {
 	var request Request
-	if err := json.NewDecoder(limitedReader).Decode(&request); err != nil {
+	if err := json.NewDecoder(reader).Decode(&request); err != nil {
 		return nil, err
 	}
 	return &request, nil

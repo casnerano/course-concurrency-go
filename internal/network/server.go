@@ -17,7 +17,7 @@ type dbHandler interface {
 	HandleQuery(ctx context.Context, rawQuery string) (*types.Value, error)
 }
 
-type Options struct {
+type ServerOptions struct {
 	Address        string
 	MaxConnections int
 	MaxMessageSize int
@@ -25,15 +25,15 @@ type Options struct {
 }
 
 type Server struct {
-	options   Options
 	listener  net.Listener
 	protocol  protocol.Protocol
 	dbHandler dbHandler
+	options   ServerOptions
 
 	connLimiter chan struct{}
 }
 
-func NewServer(protocol protocol.Protocol, dbHandler dbHandler, options Options) *Server {
+func NewServer(protocol protocol.Protocol, dbHandler dbHandler, options ServerOptions) *Server {
 	return &Server{
 		options:   options,
 		protocol:  protocol,
@@ -94,6 +94,54 @@ func (s *Server) listen(ctx context.Context) error {
 
 			s.handleConnection(ctx, conn)
 		}()
+	}
+}
+
+func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
+	defer func() {
+		if err := recover(); err != nil {
+			s.sendErrorResponse(conn, "internal error")
+		}
+	}()
+
+	defer func() {
+		closeErr := conn.Close()
+		if closeErr != nil {
+			logger.Error("failed close connection: " + closeErr.Error())
+		}
+	}()
+
+	for {
+		readDeadline := time.Now().Add(s.options.IdleTimeout * time.Millisecond)
+		if err := conn.SetReadDeadline(readDeadline); err != nil {
+			s.sendErrorResponse(conn, "failed to set read deadline")
+			return
+		}
+
+		request, decodeErr := s.protocol.DecodeRequest(conn)
+		if decodeErr != nil {
+			if decodeErr == io.EOF {
+				return
+			}
+
+			s.sendErrorResponse(conn, "failed decode request")
+			break
+		}
+
+		dbValue, dbHandleErr := s.dbHandler.HandleQuery(ctx, request.Payload.RawQuery)
+		if dbHandleErr != nil {
+			s.sendErrorResponse(conn, "failed handle query")
+			continue
+		}
+
+		var payload *protocol.ResponsePayload
+		if dbValue != nil {
+			payload = &protocol.ResponsePayload{
+				Value: dbValue,
+			}
+		}
+
+		s.sendSuccessResponse(conn, payload)
 	}
 }
 

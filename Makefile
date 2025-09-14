@@ -13,8 +13,14 @@ lint:
 	$(info Running lint...)
 	$(LOCAL_BIN)/golangci-lint run ./...
 
+.PHONY: test
 test:
 	go test -count=1 -race ./...
 
-run:
-	go run ./cmd/server/main.go -verbose
+.PHONY: run-sever
+run-sever:
+	go run ./cmd/server/main.go -verbose -address 127.0.0.1:8881
+
+.PHONY: run-client
+run-client:
+	go run ./cmd/client/main.go -address 127.0.0.1:8881

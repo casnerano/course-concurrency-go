@@ -9,7 +9,7 @@ import (
 type Protocol interface {
 	EncodeRequest(writer io.Writer, request *Request) error
 	EncodeResponse(writer io.Writer, response *Response) error
-	DecodeRequest(reader io.Reader, maxSize int) (*Request, error)
+	DecodeRequest(reader io.Reader) (*Request, error)
 	DecodeResponse(reader io.Reader) (*Response, error)
 }
 
