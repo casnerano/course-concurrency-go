@@ -18,7 +18,7 @@ test:
 	go test -count=1 -race ./...
 
 .PHONY: run-sever
-run-sever:
+run-server:
 	go run ./cmd/server/main.go -verbose -address 127.0.0.1:8881
 
 .PHONY: run-client

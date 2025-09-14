@@ -54,12 +54,15 @@ func buildServer(cfg *config.Config) (*network.Server, error) {
 	networkOptions := network.ServerOptions{
 		Address:        cfg.Network.Address,
 		MaxConnections: cfg.Network.MaxConnections,
-		MaxMessageSize: cfg.Network.MaxMessageSize,
 		IdleTimeout:    cfg.Network.IdleTimeout,
 	}
 
 	server := network.NewServer(
-		protocol.NewJSON(),
+		protocol.NewJSON(
+			protocol.WithMaxBufferSize(
+				cfg.Network.MaxBufferSize,
+			),
+		),
 		database.New(
 			compute.New(),
 			storage.New(engine),

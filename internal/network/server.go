@@ -20,7 +20,6 @@ type dbHandler interface {
 type ServerOptions struct {
 	Address        string
 	MaxConnections int
-	MaxMessageSize int
 	IdleTimeout    time.Duration
 }
 
@@ -111,25 +110,30 @@ func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
 		}
 	}()
 
+	var (
+		request protocol.Request
+	)
+
 	for {
-		readDeadline := time.Now().Add(s.options.IdleTimeout * time.Millisecond)
-		if err := conn.SetReadDeadline(readDeadline); err != nil {
+		if err := conn.SetReadDeadline(time.Now().Add(s.options.IdleTimeout)); err != nil {
 			s.sendErrorResponse(conn, "failed to set read deadline")
-			return
+			break
 		}
 
-		request, decodeErr := s.protocol.DecodeRequest(conn)
-		if decodeErr != nil {
-			if decodeErr == io.EOF {
+		err := s.protocol.Receive(conn, &request)
+		if err != nil {
+			if err == io.EOF {
 				return
 			}
 
+			logger.Error("failed decode request: " + err.Error())
 			s.sendErrorResponse(conn, "failed decode request")
 			break
 		}
 
 		dbValue, dbHandleErr := s.dbHandler.HandleQuery(ctx, request.Payload.RawQuery)
 		if dbHandleErr != nil {
+			logger.Error("failed handle query: " + dbHandleErr.Error())
 			s.sendErrorResponse(conn, "failed handle query")
 			continue
 		}
@@ -168,7 +172,7 @@ func (s *Server) sendFailedResponse(writer io.Writer, status protocol.ResponseSt
 }
 
 func (s *Server) sendResponse(writer io.Writer, response protocol.Response) {
-	if err := s.protocol.EncodeResponse(writer, &response); err != nil {
+	if err := s.protocol.Send(writer, &response); err != nil {
 		logger.Error("failed encode response", "context", response)
 	}
 }

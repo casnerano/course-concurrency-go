@@ -7,10 +7,8 @@ import (
 )
 
 type Protocol interface {
-	EncodeRequest(writer io.Writer, request *Request) error
-	EncodeResponse(writer io.Writer, response *Response) error
-	DecodeRequest(reader io.Reader) (*Request, error)
-	DecodeResponse(reader io.Reader) (*Response, error)
+	Send(writer io.Writer, v any) error
+	Receive(reader io.Reader, v any) error
 }
 
 type Request struct {

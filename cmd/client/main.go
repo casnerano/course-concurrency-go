@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/casnerano/course-concurrency-go/internal/network"
 	"github.com/casnerano/course-concurrency-go/internal/network/protocol"
 )
+
+const promptPrefix = "query > "
 
 var address = flag.String("address", "", "server address")
 
@@ -33,16 +36,37 @@ func main() {
 	}()
 
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Print("query > ")
-	if scanner.Scan() {
+
+	for {
+		fmt.Print(promptPrefix)
+
+		if !scanner.Scan() {
+			break
+		}
+
 		var response *protocol.Response
 		response, err = client.Send(scanner.Text())
 		if err != nil {
 			fmt.Println("response error: ", err.Error())
-			return
+			continue
 		}
 
-		fmt.Printf("response: %+v\n", response)
+		switch response.Status {
+		case protocol.ResponseStatusOk:
+			if response.Payload != nil {
+				fmt.Printf("value: %v\n", response.Payload.Value)
+			} else {
+				fmt.Println("Accepted")
+			}
+		case protocol.ResponseStatusError, protocol.ResponseStatusCancel:
+			var errText any
+			if response.Error != nil {
+				errText = *response.Error
+			}
+			fmt.Printf("%s: %v\n", strings.ToLower(string(response.Status)), errText)
+		default:
+			fmt.Println("unknown response status:", response.Status)
+		}
 	}
 }
 

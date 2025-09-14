@@ -41,16 +41,17 @@ func (c *Client) Send(query string) (*protocol.Response, error) {
 		},
 	}
 
-	if err := c.protocol.EncodeRequest(c.connection, &request); err != nil {
+	if err := c.protocol.Send(c.connection, &request); err != nil {
 		return nil, fmt.Errorf("failed encode request: %w", err)
 	}
 
-	response, err := c.protocol.DecodeResponse(c.connection)
+	var response protocol.Response
+	err := c.protocol.Receive(c.connection, &response)
 	if err != nil {
 		return nil, fmt.Errorf("failed decode response: %w", err)
 	}
 
-	return response, nil
+	return &response, nil
 }
 
 func (c *Client) Close() error {
